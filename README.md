@@ -18,7 +18,7 @@
 - 📱 **响应式设计**：手机、平板、电脑均可流畅使用
 - 🚀 **无需安装**：浏览器直接访问，随时学习
 
-**在线体验**：👉 **[http://nce.ichochy.com](http://nce.ichochy.com)**
+**在线体验**：👉 **[https://nce.ichochy.com](https://nce.ichochy.com)**
 
 ---
 

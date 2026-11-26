@@ -1068,7 +1068,6 @@ body.blur-translation .lyric-text {
 
 body.blur-translation .lyric-line:hover .lyric-translation,
 body.blur-translation .lyric-line:hover .lyric-text {
-  filter: none;
   opacity: 1;
 }
 
