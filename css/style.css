@@ -692,6 +692,11 @@ body.dark-theme .play-btn:disabled {
   transform: scale(0.5);
 }
 
+.wait-icon {
+  opacity: 0;
+  transform: scale(0.5);
+}
+
 .play-btn.playing .play-icon {
   opacity: 0;
   transform: scale(0.5);
@@ -700,6 +705,29 @@ body.dark-theme .play-btn:disabled {
 .play-btn.playing .pause-icon {
   opacity: 1;
   transform: scale(1);
+}
+
+/* 跟读等待：暂停间隙显示沙漏，提示即将继续下一句 */
+.play-btn.waiting .play-icon,
+.play-btn.waiting .pause-icon {
+  opacity: 0;
+  transform: scale(0.5);
+}
+
+.play-btn.waiting .wait-icon {
+  opacity: 1;
+  transform: scale(1);
+  animation: waitPulse 1.1s ease-in-out infinite;
+}
+
+@keyframes waitPulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.45;
+  }
 }
 
 .progress-container {
@@ -791,13 +819,6 @@ body.dark-theme .play-btn:disabled {
   font-family: var(--font-mono);
 }
 
-.speed-btn.active {
-  background: var(--accent-1);
-  color: #ffffff;
-  border-color: var(--accent-1);
-  box-shadow: 0 8px 16px var(--accent-strong);
-}
-
 .loop-toggle-btn.list {
   background: var(--accent-1);
   border-color: var(--accent-1);
@@ -850,12 +871,25 @@ body.dark-theme .play-btn:disabled {
   color: #ffffff;
 }
 
-/* 控制 5 种模式对应的独立图标显示 */
+.loop-toggle-btn.follow {
+  background: #f59e0b;
+  border-color: #f59e0b;
+  color: #ffffff;
+  box-shadow: 0 8px 16px rgba(245, 158, 11, 0.35);
+}
+
+.loop-toggle-btn.follow:hover {
+  background: #f59e0b;
+  border-color: #f59e0b;
+  color: #ffffff;
+}
+
+/* 控制 6 种模式对应的独立图标显示 */
 .loop-toggle-btn svg {
   display: none;
 }
 
-.loop-toggle-btn:not(.click):not(.one):not(.list):not(.book) .loop-icon-off {
+.loop-toggle-btn:not(.click):not(.one):not(.follow):not(.list):not(.book) .loop-icon-off {
   display: inline-block;
 }
 
@@ -867,12 +901,118 @@ body.dark-theme .play-btn:disabled {
   display: inline-block;
 }
 
+.loop-toggle-btn.follow .loop-icon-follow {
+  display: inline-block;
+}
+
 .loop-toggle-btn.list .loop-icon-list {
   display: inline-block;
 }
 
 .loop-toggle-btn.book .loop-icon-book {
   display: inline-block;
+}
+
+/* 单选浮层菜单（播放模式 / 翻译显示 / 播放速度） */
+.option-menu {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 1100;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 132px;
+  padding: 6px;
+  border: 1px solid var(--border-strong);
+  border-radius: 12px;
+  background: var(--glass-strong);
+  box-shadow: var(--shadow-md);
+  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: translateY(-4px) scale(0.98);
+  transform-origin: top right;
+  transition: opacity 0.16s ease, transform 0.16s ease, visibility 0s linear 0.16s;
+}
+
+.option-menu.open {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transform: translateY(0) scale(1);
+  transition: opacity 0.16s ease, transform 0.16s ease, visibility 0s linear 0s;
+}
+
+.option-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 7px 8px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--ink-2);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-align: left;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.option-menu-item:hover,
+.option-menu-item.active {
+  background: var(--accent-3);
+  color: var(--accent-1);
+}
+
+.option-menu-item:focus-visible {
+  background: var(--accent-3);
+  color: var(--accent-1);
+  outline: 2px solid var(--accent-1);
+  outline-offset: -2px;
+}
+
+.option-menu-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+.option-menu-icon svg {
+  display: block;
+}
+
+.option-menu-check {
+  margin-left: auto;
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.option-menu-item[aria-checked='true'] .option-menu-check {
+  opacity: 1;
+}
+
+.speed-btn.menu-open,
+.toggle-translation-btn.menu-open,
+.loop-toggle-btn.menu-open,
+.speed-btn.menu-open:hover,
+.toggle-translation-btn.menu-open:hover,
+.loop-toggle-btn.menu-open:hover {
+  background: var(--accent-3);
+  border-color: var(--accent-1);
+  color: var(--accent-1);
 }
 
 .toggle-translation-btn {
@@ -1032,83 +1172,216 @@ body.blur-translation .lyric-line:hover .lyric-text {
   opacity: 0;
   visibility: hidden;
   pointer-events: none;
-  transition: opacity 0.2s ease, visibility 0.2s ease;
+  /* visibility 用 0s 延迟切换：展开时立即可聚焦，收起时等淡出结束再隐藏 */
+  transition: opacity 0.2s ease, visibility 0s linear 0.2s;
 }
 
 .support-modal.open {
   opacity: 1;
   visibility: visible;
   pointer-events: auto;
+  transition: opacity 0.2s ease, visibility 0s linear 0s;
 }
 
 .support-modal-card {
   position: relative;
-  width: min(92vw, 360px);
-  border-radius: 20px;
+  display: flex;
+  flex-direction: column;
+  width: min(92vw, 380px);
+  max-height: calc(100dvh - 32px);
+  border-radius: 22px;
   background: var(--glass-strong);
-  border: 1px solid var(--border);
-  box-shadow: var(--shadow-md);
-  padding: 24px 20px 20px;
+  border: 1px solid var(--border-strong);
+  box-shadow: var(--shadow-xl);
   text-align: center;
+  overflow: hidden;
+  opacity: 0;
+  transform: translateY(10px) scale(0.97);
+  transition: transform 0.24s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.24s ease;
 }
 
-.support-close-btn {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  width: 30px;
-  height: 30px;
-  border-radius: 50%;
+.support-modal.open .support-modal-card {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+.support-modal-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+  padding: 16px 16px 14px;
+  border-bottom: 1px solid var(--border);
+  background: linear-gradient(135deg, var(--accent-3), transparent 72%);
+}
+
+.support-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  border-radius: 12px;
+  background: var(--paper-1);
   border: 1px solid var(--border);
-  background: var(--paper-3);
-  color: var(--ink-2);
-  font-size: 20px;
+  box-shadow: var(--shadow-sm);
+  font-size: 17px;
   line-height: 1;
-  cursor: pointer;
 }
 
-.support-close-btn:hover {
-  color: var(--ink-1);
-  border-color: var(--accent-1);
+.support-head-text {
+  flex: 1;
+  min-width: 0;
+  text-align: left;
 }
 
-.support-modal-card h3 {
-  font-size: 20px;
+.support-modal-head h2 {
+  font-size: 17px;
+  font-weight: 700;
   letter-spacing: -0.02em;
+  line-height: 1.25;
   color: var(--ink-1);
   font-family: var(--font-display);
 }
 
-.support-text {
-  margin-top: 12px;
-  color: var(--ink-2);
-  font-size: 14px;
-  line-height: 1.7;
+.support-subtitle {
+  margin-top: 1px;
+  font-size: 12px;
+  color: var(--ink-3);
+  line-height: 1.4;
 }
 
-.support-text h6 {
+.support-close-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  flex-shrink: 0;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: transparent;
   color: var(--ink-3);
+  font-size: 19px;
+  line-height: 1;
+  cursor: pointer;
+  transition: background-color 0.18s ease, color 0.18s ease, border-color 0.18s ease;
+}
+
+.support-close-btn:hover {
+  background: var(--paper-2);
+  border-color: var(--border);
+  color: var(--ink-1);
+}
+
+.support-body {
+  padding: 16px 18px 6px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .support-lead {
   color: var(--ink-1);
+  font-size: 14px;
   font-weight: 600;
+  line-height: 1.6;
+  letter-spacing: -0.01em;
 }
 
-.support-text p:last-child {
-  margin-bottom: 0;
+.support-qr-wrap {
+  width: fit-content;
+  margin: 14px auto 0;
+  padding: 10px;
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  background: #ffffff;
+  box-shadow: var(--shadow-sm);
 }
 
 .support-qr {
-  margin: 12px auto;
   display: block;
-  width: min(62vw, 220px);
-  height: auto;
-  border-radius: 12px;
+  width: 164px;
+  height: 164px;
+  border-radius: 8px;
+}
+
+/* 作者说明：弱化为辅助信息，不抢二维码与按钮的注意力 */
+.support-note {
+  margin-top: 12px;
+  padding: 0 6px;
+  color: var(--ink-3);
+  font-size: 11.5px;
+  line-height: 1.7;
+  letter-spacing: 0;
+  text-align: center;
+}
+
+.support-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  flex-shrink: 0;
+  padding: 14px 18px 16px;
+  border-top: 1px solid var(--border);
+}
+
+.support-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  height: 38px;
+  padding: 0 10px;
+  border-radius: 999px;
   border: 1px solid var(--border);
-  background: #fff;
-  padding: 8px;
-  box-shadow: var(--shadow-sm);
+  font-size: 13px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color 0.18s ease, border-color 0.18s ease, color 0.18s ease, transform 0.18s ease;
+}
+
+.support-action:hover {
+  transform: translateY(-1px);
+}
+
+.support-action:active {
+  transform: scale(0.98);
+}
+
+.support-action.ghost {
+  background: var(--paper-2);
+  color: var(--ink-1);
+}
+
+.support-action.ghost:hover {
+  background: var(--accent-3);
+  border-color: var(--accent-1);
+  color: var(--accent-1);
+}
+
+.support-action.primary {
+  background: var(--accent-1);
+  border-color: var(--accent-1);
+  color: #ffffff;
+  box-shadow: 0 10px 20px var(--accent-strong);
+}
+
+.support-action.primary:hover {
+  background: var(--accent-2);
+  border-color: var(--accent-2);
+  color: #ffffff;
+}
+
+.support-fineprint {
+  grid-column: 1 / -1;
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--ink-3);
+  font-family: var(--font-mono);
 }
 
 .like-and-support a,
@@ -1352,9 +1625,34 @@ body::-webkit-scrollbar-thumb:hover,
   }
 
   .support-modal-card {
-    width: min(94vw, 340px);
-    padding: 20px 16px 16px;
-    border-radius: 16px;
+    width: min(94vw, 360px);
+    border-radius: 18px;
+  }
+
+  .support-modal-head {
+    padding: 14px 14px 12px;
+  }
+
+  .support-modal-head h2 {
+    font-size: 16px;
+  }
+
+  .support-body {
+    padding: 14px 14px 4px;
+  }
+
+  .support-qr {
+    width: 148px;
+    height: 148px;
+  }
+
+  .support-actions {
+    padding: 12px 14px 14px;
+  }
+
+  .support-action {
+    height: 36px;
+    font-size: 12.5px;
   }
 
   .footer {

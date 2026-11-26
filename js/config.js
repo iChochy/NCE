@@ -14,14 +14,15 @@ export const CONFIG = {
     THEME: 'theme',
   },
 
-  AVAILABLE_SPEEDS: [0.5, 0.75, 1.0, 1.25, 1.5, 2.0],
+  AVAILABLE_SPEEDS: [0.5, 0.8, 1.0, 1.2, 1.5, 1.8, 2.0],
   TRANSLATION_MODES: ['show', 'english', 'chinese', 'blur'],
-  LOOP_MODES: ['off', 'click', 'one', 'list', 'book'],
+  LOOP_MODES: ['off', 'click', 'follow', 'one', 'list', 'book'],
 
   PLAYER: {
-    MAX_AUDIO_CACHE: 3,
-    MAX_LRC_CACHE: 3,
+    MAX_AUDIO_CACHE: 1,
+    MAX_LRC_CACHE: 1,
     TIME_OFFSET: 0.3,
+    FOLLOW_WAIT_RATIO: 1.2,
   },
 
   UI: {
@@ -52,5 +53,7 @@ export function createInitialState() {
     playbackRate: 1.0,
     translationMode: 'show',
     sentenceLoopIndex: -1,
+    followSentenceIndex: -1,
+    followWaitIndex: -1,
   };
 }

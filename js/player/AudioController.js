@@ -18,6 +18,8 @@ export class AudioController {
    * @param {(currentTime: number) => void} [options.onPersist]
    * @param {() => void} [options.onEnded]
    * @param {() => void} [options.onLoaded] 音频加载完成（元数据就绪）后触发
+   * @param {() => void} [options.onPlay] 开始播放时触发
+   * @param {() => void} [options.onSeek] 用户点击或拖动进度条时触发
    */
   constructor(options) {
     this.audio = options.audio;
@@ -29,10 +31,13 @@ export class AudioController {
     this.onPersist = options.onPersist;
     this.onEnded = options.onEnded;
     this.onLoaded = options.onLoaded;
+    this.onPlay = options.onPlay;
+    this.onSeek = options.onSeek;
 
     this.dragging = false;
     this.pendingTime = 0;
     this.rate = 1;
+    this.waiting = false;
     this.abort = new AbortController();
 
     this.#bind();
@@ -119,6 +124,7 @@ export class AudioController {
 
   reset() {
     if (!this.audio) return;
+    this.setWaiting(false);
     this.audio.pause();
     this.audio.removeAttribute('src');
     this.audio.load();
@@ -139,8 +145,22 @@ export class AudioController {
   updatePlayButton() {
     if (!this.playBtn) return;
     const playing = !this.paused;
-    toggleClass(this.playBtn, 'playing', playing);
-    this.playBtn.setAttribute('aria-label', playing ? '暂停' : '播放');
+    toggleClass(this.playBtn, 'playing', playing && !this.waiting);
+    toggleClass(this.playBtn, 'waiting', this.waiting);
+
+    const label = this.waiting ? '跟读等待中，点击继续播放' : playing ? '暂停' : '播放';
+    this.playBtn.setAttribute('aria-label', label);
+  }
+
+  /**
+   * 跟读等待状态：显示等待图标，并提示点击可提前继续
+   * @param {boolean} waiting
+   */
+  setWaiting(waiting) {
+    const next = Boolean(waiting);
+    if (next === this.waiting) return;
+    this.waiting = next;
+    this.updatePlayButton();
   }
 
   updateProgress(force = false) {
@@ -174,6 +194,7 @@ export class AudioController {
         const rect = this.progressBar.getBoundingClientRect();
         const percent = clamp((clientX - rect.left) / rect.width, 0, 1);
         this.seek(percent * this.duration);
+        this.onSeek?.(this.currentTime);
       };
 
       on(this.progressBar, 'click', (event) => seekByClientX(event.clientX), { signal });
@@ -223,7 +244,10 @@ export class AudioController {
     }, { signal });
     on(this.audio, 'canplay', () => this.setDisabled(false), { signal });
     on(this.audio, 'loadstart', () => this.setDisabled(true), { signal });
-    on(this.audio, 'play', () => this.updatePlayButton(), { signal });
+    on(this.audio, 'play', () => {
+      this.updatePlayButton();
+      this.onPlay?.();
+    }, { signal });
     on(this.audio, 'pause', () => {
       this.updatePlayButton();
       this.onPersist?.(this.currentTime);

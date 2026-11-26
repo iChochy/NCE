@@ -13,6 +13,7 @@
 
 - 🎧 **美音课文朗读**：流畅自然的原版音频
 - 📍 **单句点读**：点击任意句子即可跟读练习
+- 🔁 **跟读模式**：逐句播放，每句后停留 1.2 倍句长时间，留出跟读间隙
 - 📖 **中英对照**：逐句显示中英文，便于理解
 - 📱 **响应式设计**：手机、平板、电脑均可流畅使用
 - 🚀 **无需安装**：浏览器直接访问，随时学习
@@ -151,7 +152,7 @@ your-book/
 ## ☕ 支持与打赏
 如果这个项目或内容曾对您有所帮助，欢迎给予一点支持：
 - ⭐ **点一个 Star，鼓励项目持续维护**
-- ☕ **请我喝杯咖啡，或打赏一点生命值（可选）**
+- ☕ **请我喝杯咖啡或打赏一点生命值（可选）**
 
 ![Sponsor](https://image.ichochy.com/sponsor.jpg)
 
@@ -170,7 +171,21 @@ your-book/
 
 ---
 
+## 推荐  
+### AI 聚合平台
+#### 支持 Claude、OpenAI、Grok、Gemini、DeepSeek 等……
+ZenMux：[API 聚合平台](https://mleo.site/api)
+
+### VPS
+#### 泰国、印尼、菲律宾、马来西亚、亚太等……
+Lightnode：[1C2G-$7.71/Month](https://mleo.site/vps)
+
+---
+
 **作者**：iChochy  
 **Blog**：https://ichochy.com  
 **Email**：qim.dev@icloud.com  
-**GitHub**：https://github.com/ichochy/nce
+**GitHub**：https://github.com/iChochy/NCE
+
+
+

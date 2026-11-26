@@ -38,3 +38,13 @@ export function formatTime(seconds) {
   const secs = Math.floor(seconds % 60);
   return `${mins}:${secs.toString().padStart(2, '0')}`;
 }
+
+/**
+ * 倍速展示：整数补一位小数，保持 1.0x / 1.25x 风格统一
+ * @param {number} rate
+ * @returns {string}
+ */
+export function formatRate(rate) {
+  if (!Number.isFinite(rate)) return '1.0x';
+  return `${Number.isInteger(rate) ? rate.toFixed(1) : rate}x`;
+}

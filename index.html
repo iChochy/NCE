@@ -130,10 +130,10 @@
                       stroke-linejoin="round" />
               </svg>
             </button>
-            <button id="toggleTranslationBtn" class="toggle-translation-btn" type="button" aria-pressed="false">
+            <button id="toggleTranslationBtn" class="toggle-translation-btn" type="button" title="翻译显示：显示双语" aria-label="翻译显示：显示双语" aria-haspopup="menu" aria-expanded="false" aria-controls="translationMenu">
               中
             </button>
-            <button id="loopToggleBtn" class="loop-toggle-btn" type="button" title="循环播放" aria-label="循环播放" aria-pressed="false">
+            <button id="loopToggleBtn" class="loop-toggle-btn" type="button" title="播放模式" aria-label="播放模式" aria-haspopup="menu" aria-expanded="false" aria-controls="loopMenu">
               <!-- 1. 关闭循环：循环箭头 + 斜线禁用符号 -->
               <svg class="loop-icon-off" width="18" height="18" viewBox="0 0 20 20" fill="none" aria-hidden="true">
                 <path d="M4.5 8A5.5 5.5 0 0 1 13 4.5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
@@ -153,7 +153,15 @@
                 <path d="M8 12.5V10" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
               </svg>
 
-              <!-- 3. 单句循环：循环箭头 + 中心「1」-->
+              <!-- 3. 跟读模式：人像 + 声波 -->
+              <svg class="loop-icon-follow" width="18" height="18" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                <circle cx="7" cy="6.5" r="2.4" stroke="currentColor" stroke-width="1.6"/>
+                <path d="M3 15.5a4 4 0 0 1 8 0" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+                <path d="M13 8.5c1 .8 1 2.2 0 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                <path d="M15.5 6.5c2.2 1.8 2.2 5.2 0 7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+              </svg>
+
+              <!-- 4. 单句循环：循环箭头 + 中心「1」-->
               <svg class="loop-icon-one" width="18" height="18" viewBox="0 0 20 20" fill="none" aria-hidden="true">
                 <path d="M4.5 8A5.5 5.5 0 0 1 13 4.5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
                 <path d="M11 2.5l2.5 2.5-2.5 2" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
@@ -164,7 +172,7 @@
                 <text x="10" y="12" text-anchor="middle" font-size="5.5" font-weight="900" fill="var(--bg, #fff)" stroke="none" font-family="system-ui,sans-serif">1</text>
               </svg>
 
-              <!-- 4. 本课循环：横线列表 + 右侧循环箭头 -->
+              <!-- 5. 本课循环：横线列表 + 右侧循环箭头 -->
               <svg class="loop-icon-list" width="18" height="18" viewBox="0 0 20 20" fill="none" aria-hidden="true">
                 <!-- 三条列表线 -->
                 <path d="M2.5 5.5h9M2.5 10h7M2.5 14.5h5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
@@ -174,7 +182,7 @@
                 <path d="M16.5 11.5l-2.5 3-2.5-3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
               </svg>
 
-              <!-- 5. 本书循环：书页 + 围绕书的大循环箭头 -->
+              <!-- 6. 本书循环：书页 + 围绕书的大循环箭头 -->
               <svg class="loop-icon-book" width="18" height="18" viewBox="0 0 20 20" fill="none" aria-hidden="true">
                 <!-- 书本主体 -->
                 <rect x="5" y="4" width="10" height="12" rx="1.2" stroke="currentColor" stroke-width="1.5"/>
@@ -187,6 +195,7 @@
                 <path d="M14.5 17A7 7 0 0 1 5.5 17" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
                 <path d="M7 18.5L5.5 17 7 15.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
               </svg>
+
             </button>
           </div>
 
@@ -199,6 +208,11 @@
               <svg class="pause-icon" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                 <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z" />
               </svg>
+              <svg class="wait-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M7.5 3.5h9M7.5 20.5h9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                <path d="M8.5 3.5v1.9c0 1.3.6 2.6 1.7 3.4L12 10.2l1.8-1.4a4.2 4.2 0 0 0 1.7-3.4V3.5" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
+                <path d="M8.5 20.5v-1.9c0-1.3.6-2.6 1.7-3.4L12 13.8l1.8 1.4a4.2 4.2 0 0 1 1.7 3.4v1.9" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
+              </svg>
             </button>
             <div class="progress-container">
               <span id="currentTime" class="time-display">0:00</span>
@@ -208,7 +222,7 @@
               </div>
               <span id="duration" class="time-display">0:00</span>
             </div>
-            <button id="speedBtn" class="speed-btn" type="button" title="播放速度">
+            <button id="speedBtn" class="speed-btn" type="button" title="播放速度：1.0x" aria-label="播放速度：1.0x" aria-haspopup="menu" aria-expanded="false" aria-controls="speedMenu">
               <span id="speedText">1.0x</span>
             </button>
           </div>
@@ -236,17 +250,40 @@
   </footer>
 </div>
 
-<div id="supportModal" class="support-modal" aria-hidden="true" role="dialog" aria-labelledby="supportModalTitle">
+<div id="loopMenu" class="option-menu" role="menu" aria-label="播放模式"></div>
+
+<div id="translationMenu" class="option-menu" role="menu" aria-label="翻译显示"></div>
+
+<div id="speedMenu" class="option-menu" role="menu" aria-label="播放速度"></div>
+
+<div id="supportModal" class="support-modal" aria-hidden="true" role="dialog" aria-modal="true"
+     aria-labelledby="supportModalTitle" aria-describedby="supportModalDesc">
   <div class="support-modal-card">
-    <button id="supportCloseBtn" class="support-close-btn" type="button" aria-label="关闭弹窗">×</button>
-    <h3 id="supportModalTitle">感谢支持</h3>
-    <div class="support-text">
-      <h3 class="support-lead">点赞、收藏、分享</h3>
-      <h4>如果内容有帮助过您，欢迎给予一点支持：</h4>
-      <h5>请我喝杯咖啡，或打赏一点生命值（可选）</h5>
-      <img class="support-qr" src="sponsor.jpg" alt="赞助二维码" loading="lazy"/>
-      <h6>我是一个 80 后程序员，目前正在与白血病（CMML）抗争。</h6>
-      <h5>感谢您的认可与善意，祝您一切顺利！</h5>
+    <div class="support-modal-head">
+      <span class="support-badge" aria-hidden="true">☕</span>
+      <div class="support-head-text">
+        <h2 id="supportModalTitle">支持与打赏</h2>
+        <p class="support-subtitle">打赏完全自愿！</p>
+      </div>
+      <button id="supportCloseBtn" class="support-close-btn" type="button" aria-label="关闭弹窗">×</button>
+    </div>
+
+    <div class="support-body">
+      <p id="supportModalDesc" class="support-lead">请我喝杯咖啡或打赏一点生命值（可选）</p>
+      <div class="support-qr-wrap">
+        <img class="support-qr" src="sponsor.jpg" alt="赞助二维码" width="200" height="200" loading="lazy" />
+      </div>
+      <p class="support-note">
+        我是一个 80 后程序员，目前正在与白血病（CMML）抗争。
+      </p>
+    </div>
+
+    <div class="support-actions">
+      <a class="support-action ghost" target="_blank" rel="noopener noreferrer"
+         href="https://github.com/iChochy/NCE"><span aria-hidden="true">⭐</span>点个 Star</a>
+      <a class="support-action primary" target="_blank" rel="noopener noreferrer"
+         href="https://www.ichochy.com/sponsor.html"><span aria-hidden="true">☕</span>前往赞助主页</a>
+      <p class="support-fineprint">感谢您的认可与善意，祝您一切顺利！</p>
     </div>
   </div>
 </div>

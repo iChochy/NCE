@@ -93,26 +93,12 @@ export class LyricsView {
 
   /**
    * @param {string} mode
-   * @param {HTMLElement} [toggleBtn]
    */
-  applyTranslationMode(mode, toggleBtn) {
+  applyTranslationMode(mode) {
     const body = document.body;
     body.classList.toggle(MODE_CLASS.english, mode === 'english');
     body.classList.toggle(MODE_CLASS.chinese, mode === 'chinese');
     body.classList.toggle(MODE_CLASS.blur, mode === 'blur');
-
-    if (!toggleBtn) return;
-
-    const labels = {
-      show: { text: '双', pressed: 'true', label: '显示双语' },
-      blur: { text: '糊', pressed: 'mixed', label: '模糊翻译' },
-      english: { text: '英', pressed: 'false', label: '仅显示英文' },
-      chinese: { text: '中', pressed: 'true', label: '仅显示中文' },
-    };
-    const ui = labels[mode] || labels.show;
-    toggleBtn.textContent = ui.text;
-    toggleBtn.setAttribute('aria-pressed', ui.pressed);
-    toggleBtn.setAttribute('aria-label', ui.label);
   }
 
   destroy() {

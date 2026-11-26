@@ -32,7 +32,10 @@ export class SupportModal {
     this.modal.classList.add('open');
     this.modal.setAttribute('aria-hidden', 'false');
     this.isOpen = true;
-    this.closeBtn?.focus();
+    // 点击按钮后浏览器会把焦点移回按钮，等一帧再把焦点放进弹窗
+    requestAnimationFrame(() => {
+      if (this.isOpen) this.closeBtn?.focus();
+    });
   }
 
   close() {

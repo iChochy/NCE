@@ -5,7 +5,7 @@
 
 import { CONFIG, createInitialState } from './config.js';
 import { qs, qsa, on, setText, toggleClass } from './utils/dom.js';
-import { clamp, debounce } from './utils/helpers.js';
+import { clamp, debounce, formatRate } from './utils/helpers.js';
 import {
   getStorage,
   setStorage,
@@ -18,6 +18,7 @@ import { LRCParser } from './utils/LRCParser.js';
 import { BookService } from './services/BookService.js';
 import { PrefetchService } from './services/PrefetchService.js';
 import { AudioController } from './player/AudioController.js';
+import { OptionMenu } from './ui/OptionMenu.js';
 import { LyricsView } from './ui/LyricsView.js';
 import { UnitView } from './ui/UnitView.js';
 import { Toast } from './ui/Toast.js';
@@ -25,6 +26,7 @@ import { Toast } from './ui/Toast.js';
 const LOOP_MODE_LABELS = {
   off: '关闭循环',
   click: '单句点读',
+  follow: '跟读模式',
   one: '单句循环',
   list: '本课循环',
   book: '本书循环',
@@ -32,9 +34,16 @@ const LOOP_MODE_LABELS = {
 
 const TRANSLATION_LABELS = {
   show: '显示双语',
-  english: '仅显示英文',
-  chinese: '仅显示中文',
+  english: '显示英文',
+  chinese: '显示中文',
   blur: '模糊翻译',
+};
+
+const TRANSLATION_SHORT_LABELS = {
+  show: '双',
+  english: '英',
+  chinese: '中',
+  blur: '糊',
 };
 
 export class ReadingSystem {
@@ -49,6 +58,7 @@ export class ReadingSystem {
 
     this.bookAbort = null;
     this.unitAbort = null;
+    this.followTimer = null;
     this.unitLoadId = 0;
     this.ready = false;
     this.persistProgress = debounce(() => this.#saveProgress(), 1500);
@@ -63,6 +73,8 @@ export class ReadingSystem {
       onPersist: () => this.#saveProgress(),
       onEnded: () => this.#onAudioEnded(),
       onLoaded: () => this.toast.show('音频已加载', { type: 'success' }),
+      onPlay: () => this.#onAudioPlay(),
+      onSeek: () => this.#onAudioSeek(),
     });
 
     this.lyricsView = new LyricsView({
@@ -89,6 +101,40 @@ export class ReadingSystem {
     this.speedText = qs('#speedText');
     this.loopToggleBtn = qs('#loopToggleBtn');
     this.toggleTranslationBtn = qs('#toggleTranslationBtn');
+
+    this.loopMenu = new OptionMenu({
+      button: this.loopToggleBtn,
+      root: qs('#loopMenu'),
+      items: this.config.LOOP_MODES.map((mode) => ({
+        value: mode,
+        label: LOOP_MODE_LABELS[mode],
+        icon: `loop-icon-${mode}`,
+      })),
+      onSelect: (mode) => this.#setLoopMode(mode),
+      onOpen: () => this.#closeMenus(this.loopMenu),
+    });
+
+    this.translationMenu = new OptionMenu({
+      button: this.toggleTranslationBtn,
+      root: qs('#translationMenu'),
+      items: this.config.TRANSLATION_MODES.map((mode) => ({
+        value: mode,
+        label: TRANSLATION_LABELS[mode],
+      })),
+      onSelect: (mode) => this.#setTranslationMode(mode),
+      onOpen: () => this.#closeMenus(this.translationMenu),
+    });
+
+    this.speedMenu = new OptionMenu({
+      button: this.speedBtn,
+      root: qs('#speedMenu'),
+      items: this.config.AVAILABLE_SPEEDS.map((rate) => ({
+        value: String(rate),
+        label: formatRate(rate),
+      })),
+      onSelect: (value) => this.#setSpeed(Number(value)),
+      onOpen: () => this.#closeMenus(this.speedMenu),
+    });
 
     this.toast = new Toast();
 
@@ -118,6 +164,7 @@ export class ReadingSystem {
   }
 
   async applyBookChange(bookKey) {
+    this.#closeMenus();
     this.bookAbort?.abort();
     this.unitAbort?.abort();
     this.unitLoadId += 1;
@@ -149,6 +196,7 @@ export class ReadingSystem {
     this.persistProgress.cancel();
     this.#saveProgress();
     this.ready = false;
+    this.#clearFollowWait();
     this.player.reset();
     this.state.currentUnitIndex = -1;
     this.state.currentLyrics = [];
@@ -200,6 +248,8 @@ export class ReadingSystem {
     this.state.currentUnitIndex = unitIndex;
     this.state.currentLyricIndex = -1;
     this.state.sentenceLoopIndex = -1;
+    this.state.followSentenceIndex = -1;
+    this.#clearFollowWait();
     this.state.currentLyrics = [];
     saveCurrentUnitIndex(this.state.bookKey, unitIndex);
 
@@ -232,10 +282,14 @@ export class ReadingSystem {
 
   destroy() {
     this.#saveProgress();
+    this.#clearFollowWait();
     this.bookAbort?.abort();
     this.unitAbort?.abort();
     this.abort.abort();
     this.player.destroy();
+    this.loopMenu.destroy();
+    this.translationMenu.destroy();
+    this.speedMenu.destroy();
     this.lyricsView.destroy();
     this.unitView.destroy();
     this.prefetch.clear();
@@ -244,10 +298,6 @@ export class ReadingSystem {
 
   #bindChrome() {
     const { signal } = this.abort;
-
-    on(this.speedBtn, 'click', () => this.#cycleSpeed(), { signal });
-    on(this.loopToggleBtn, 'click', () => this.#cycleLoopMode(), { signal });
-    on(this.toggleTranslationBtn, 'click', () => this.#cycleTranslation(), { signal });
 
     on(window, 'hashchange', () => {
       const newKey = location.hash.slice(1).trim() || this.config.DEFAULT_BOOK_KEY;
@@ -290,7 +340,7 @@ export class ReadingSystem {
     this.player.setRate(this.state.playbackRate);
     this.#updateSpeedUI();
     this.#updateLoopUI();
-    this.lyricsView.applyTranslationMode(this.state.translationMode, this.toggleTranslationBtn);
+    this.#updateTranslationUI();
   }
 
   #onBookSelect(bookKey) {
@@ -299,6 +349,7 @@ export class ReadingSystem {
   }
 
   #onUnitNavigate(value) {
+    this.#closeMenus();
     if (value === 'prev') {
       if (this.state.currentUnitIndex > 0) {
         this.loadUnitByIndex(this.state.currentUnitIndex - 1);
@@ -320,10 +371,33 @@ export class ReadingSystem {
     if (this.state.loopMode === 'one' || this.state.loopMode === 'click') {
       this.state.sentenceLoopIndex = index;
     }
+    if (this.state.loopMode === 'follow') {
+      this.#clearFollowWait();
+      this.state.followSentenceIndex = index;
+    }
     this.#setHighlight(index);
     this.player.seek(time);
     this.player.play();
     this.#saveProgress(time);
+  }
+
+  #onAudioPlay() {
+    if (this.state.loopMode !== 'follow') return;
+    this.#clearFollowWait();
+    this.state.followSentenceIndex = LRCParser.findLyricIndexByTime(
+      this.state.currentLyrics,
+      this.player.currentTime
+    );
+  }
+
+  #onAudioSeek() {
+    if (this.state.loopMode !== 'follow') return;
+    this.#clearFollowWait();
+    this.state.followSentenceIndex = LRCParser.findLyricIndexByTime(
+      this.state.currentLyrics,
+      this.player.currentTime
+    );
+    this.#syncHighlight();
   }
 
   #onAudioTick(currentTime, duration) {
@@ -348,11 +422,18 @@ export class ReadingSystem {
     const locked = this.#lockedSentenceIndex();
     const index = locked >= 0
       ? locked
-      : LRCParser.findLyricIndexByTime(this.state.currentLyrics, this.player.currentTime);
+      : this.state.followWaitIndex >= 0
+        ? this.state.followWaitIndex
+        : LRCParser.findLyricIndexByTime(this.state.currentLyrics, this.player.currentTime);
     this.#setHighlight(index);
   }
 
   #handleSentence(currentTime, duration) {
+    if (this.state.loopMode === 'follow') {
+      this.#handleFollow(currentTime, duration);
+      return;
+    }
+
     const locked = this.#lockedSentenceIndex();
     if (locked < 0 || !Number.isFinite(currentTime)) return;
 
@@ -373,23 +454,87 @@ export class ReadingSystem {
     this.#setHighlight(locked);
   }
 
-  #cycleSpeed() {
-    const speeds = this.config.AVAILABLE_SPEEDS;
-    const currentIndex = speeds.indexOf(this.state.playbackRate);
-    this.state.playbackRate = speeds[(currentIndex + 1) % speeds.length];
-    this.player.setRate(this.state.playbackRate);
-    setStorage(this.config.STORAGE_KEYS.PLAYBACK_RATE, this.state.playbackRate);
+  /**
+   * 跟读模式：每句播完后暂停 1.2 倍句长的时间，再继续下一句
+   */
+  #handleFollow(currentTime, duration) {
+    if (!Number.isFinite(currentTime)) return;
+    if (this.followTimer !== null || this.state.followWaitIndex >= 0) return;
+
+    const lyrics = this.state.currentLyrics;
+    if (!lyrics.length) return;
+
+    const index = LRCParser.findLyricIndexByTime(lyrics, currentTime);
+
+    // 首次进入或用户回退时只同步进度，不触发停留
+    if (this.state.followSentenceIndex < 0 || index < this.state.followSentenceIndex) {
+      this.state.followSentenceIndex = index;
+      return;
+    }
+    if (index === this.state.followSentenceIndex) return;
+
+    const endedIndex = this.state.followSentenceIndex;
+    const boundaries = LRCParser.getSentenceBoundaries(lyrics, endedIndex, duration);
+    const next = lyrics[index];
+    if (!boundaries || !next) {
+      this.state.followSentenceIndex = index;
+      return;
+    }
+
+    const sentenceDuration = Math.max(0.1, boundaries.endTime - boundaries.startTime);
+    const waitMs = (sentenceDuration * this.config.PLAYER.FOLLOW_WAIT_RATIO * 1000)
+      / this.state.playbackRate;
+
+    this.player.pause();
+    this.player.seek(next.time);
+    this.state.followSentenceIndex = index;
+    this.state.followWaitIndex = endedIndex;
+    this.#setHighlight(endedIndex);
+    this.player.setWaiting(true);
+
+    this.followTimer = setTimeout(() => {
+      this.followTimer = null;
+      this.state.followWaitIndex = -1;
+      this.player.setWaiting(false);
+      if (this.state.loopMode !== 'follow' || this.state.currentLyrics !== lyrics) return;
+      this.player.play();
+    }, waitMs);
+  }
+
+  #clearFollowWait() {
+    if (this.followTimer !== null) {
+      clearTimeout(this.followTimer);
+      this.followTimer = null;
+    }
+    this.state.followWaitIndex = -1;
+    this.player?.setWaiting(false);
+  }
+
+  #setSpeed(rate) {
+    if (!this.config.AVAILABLE_SPEEDS.includes(rate)) return;
+
+    const changed = rate !== this.state.playbackRate;
+    this.state.playbackRate = rate;
+    this.player.setRate(rate);
+    setStorage(this.config.STORAGE_KEYS.PLAYBACK_RATE, rate);
     this.#updateSpeedUI();
-    this.toast.show(`播放速度 ${this.state.playbackRate}x`);
+    if (changed) this.toast.show(`播放速度 ${formatRate(rate)}`);
   }
 
   #updateSpeedUI() {
-    setText(this.speedText, `${this.state.playbackRate}x`);
-    toggleClass(this.speedBtn, 'active', this.state.playbackRate !== 1.0);
+    const rate = this.state.playbackRate;
+    const text = formatRate(rate);
+    setText(this.speedText, text);
+
+    const label = `播放速度：${text}`;
+    this.speedBtn.title = label;
+    this.speedBtn.setAttribute('aria-label', label);
+    this.speedMenu.setActive(String(rate));
   }
 
   #onAudioEnded() {
     this.#saveProgress();
+    this.#clearFollowWait();
     if (!this.state.units.length) return;
 
     if (this.state.loopMode === 'book') {
@@ -400,23 +545,27 @@ export class ReadingSystem {
     }
   }
 
-  #cycleLoopMode() {
-    const modes = this.config.LOOP_MODES;
-    const nextMode = modes[(modes.indexOf(this.state.loopMode) + 1) % modes.length];
-    this.state.loopMode = nextMode;
+  #setLoopMode(mode) {
+    if (!this.config.LOOP_MODES.includes(mode)) return;
 
-    if ((nextMode === 'one' || nextMode === 'click') && this.state.currentLyricIndex >= 0) {
+    const changed = mode !== this.state.loopMode;
+    this.state.loopMode = mode;
+
+    if ((mode === 'one' || mode === 'click') && this.state.currentLyricIndex >= 0) {
       this.state.sentenceLoopIndex = this.state.currentLyricIndex;
     }
-    if (nextMode === 'list' || nextMode === 'off' || nextMode === 'book') {
+    if (mode === 'follow' || mode === 'list' || mode === 'off' || mode === 'book') {
       this.state.sentenceLoopIndex = -1;
     }
 
-    setStorage(this.config.STORAGE_KEYS.LOOP_MODE, nextMode);
-    this.player.setLoop(nextMode === 'list');
+    this.#clearFollowWait();
+    this.state.followSentenceIndex = -1;
+
+    setStorage(this.config.STORAGE_KEYS.LOOP_MODE, mode);
+    this.player.setLoop(mode === 'list');
     this.#updateLoopUI();
     this.#syncHighlight();
-    this.toast.show(LOOP_MODE_LABELS[nextMode]);
+    if (changed) this.toast.show(LOOP_MODE_LABELS[mode] || '播放模式');
   }
 
   #updateLoopUI() {
@@ -424,28 +573,50 @@ export class ReadingSystem {
 
     const mode = this.state.loopMode;
     const isClick = mode === 'click';
+    const isFollow = mode === 'follow';
     const isOne = mode === 'one';
     const isList = mode === 'list';
     const isBook = mode === 'book';
 
-    this.loopToggleBtn.setAttribute('aria-pressed', mode !== 'off' ? 'true' : 'false');
-    toggleClass(this.loopToggleBtn, 'list', isList);
     toggleClass(this.loopToggleBtn, 'click', isClick);
+    toggleClass(this.loopToggleBtn, 'follow', isFollow);
     toggleClass(this.loopToggleBtn, 'one', isOne);
+    toggleClass(this.loopToggleBtn, 'list', isList);
     toggleClass(this.loopToggleBtn, 'book', isBook);
 
-    const label = LOOP_MODE_LABELS[mode] || '循环播放';
+    this.loopMenu.setActive(mode);
+
+    const label = `播放模式：${LOOP_MODE_LABELS[mode] || '关闭循环'}`;
     this.loopToggleBtn.title = label;
     this.loopToggleBtn.setAttribute('aria-label', label);
   }
 
-  #cycleTranslation() {
-    const modes = this.config.TRANSLATION_MODES;
-    const currentIndex = modes.indexOf(this.state.translationMode);
-    this.state.translationMode = modes[(currentIndex + 1) % modes.length];
-    setStorage(this.config.STORAGE_KEYS.TRANSLATION_MODE, this.state.translationMode);
-    this.lyricsView.applyTranslationMode(this.state.translationMode, this.toggleTranslationBtn);
-    this.toast.show(TRANSLATION_LABELS[this.state.translationMode]);
+  #setTranslationMode(mode) {
+    if (!this.config.TRANSLATION_MODES.includes(mode)) return;
+
+    const changed = mode !== this.state.translationMode;
+    this.state.translationMode = mode;
+    setStorage(this.config.STORAGE_KEYS.TRANSLATION_MODE, mode);
+    this.#updateTranslationUI();
+    if (changed) this.toast.show(TRANSLATION_LABELS[mode]);
+  }
+
+  #updateTranslationUI() {
+    const mode = this.state.translationMode;
+    this.lyricsView.applyTranslationMode(mode);
+    this.translationMenu.setActive(mode);
+
+    setText(this.toggleTranslationBtn, TRANSLATION_SHORT_LABELS[mode] || '双');
+    const label = `翻译显示：${TRANSLATION_LABELS[mode] || '显示双语'}`;
+    this.toggleTranslationBtn.title = label;
+    this.toggleTranslationBtn.setAttribute('aria-label', label);
+  }
+
+  #closeMenus(except) {
+    for (const menu of [this.loopMenu, this.translationMenu, this.speedMenu]) {
+      if (menu === except) continue;
+      menu.hide({ restoreFocus: false });
+    }
   }
 
   #saveProgress(time = this.player.currentTime) {
