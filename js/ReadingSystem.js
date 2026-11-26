@@ -36,7 +36,7 @@ const TRANSLATION_LABELS = {
   show: '显示双语',
   english: '显示英文',
   chinese: '显示中文',
-  blur: '模糊翻译',
+  blur: '模糊内容',
 };
 
 const TRANSLATION_SHORT_LABELS = {
